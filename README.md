@@ -1,66 +1,75 @@
-## Foundry
+# Cryptopaws Smart Contracts
 
-**Foundry is a blazing fast, portable and modular toolkit for Ethereum application development written in Rust.**
+Smart contracts for the Cryptopaws platform, handling donations and organization management on the blockchain.
 
-Foundry consists of:
+## Prerequisites
 
--   **Forge**: Ethereum testing framework (like Truffle, Hardhat and DappTools).
--   **Cast**: Swiss army knife for interacting with EVM smart contracts, sending transactions and getting chain data.
--   **Anvil**: Local Ethereum node, akin to Ganache, Hardhat Network.
--   **Chisel**: Fast, utilitarian, and verbose solidity REPL.
+- Foundry (forge, anvil, cast)
+- Node.js (for testing)
+- Git
 
-## Documentation
+## Installation
 
-https://book.getfoundry.sh/
+```bash
+# Clone the repository
+git clone https://github.com/MeowDev9/Cryptopaws-Smart-Contracts.git
 
-## Usage
-
-### Build
-
-```shell
-$ forge build
+# Install dependencies
+forge install
 ```
 
-### Test
+## Project Structure
 
-```shell
-$ forge test
+```
+contracts/
+├── src/                # Source files
+│   ├── DonationContract.sol    # Main donation contract
+│   └── ...
+├── test/              # Test files
+├── script/            # Deployment scripts
+└── lib/              # Dependencies
 ```
 
-### Format
+## Contracts
 
-```shell
-$ forge fmt
+### DonationContract.sol
+The main contract that handles:
+- Organization registration
+- Donation processing
+- Donation tracking
+- Organization status management
+
+## Development
+
+### Compile Contracts
+```bash
+forge build
 ```
 
-### Gas Snapshots
-
-```shell
-$ forge snapshot
+### Run Tests
+```bash
+forge test
 ```
 
-### Anvil
-
-```shell
-$ anvil
+### Deploy Contracts
+```bash
+forge script script/Deploy.s.sol --rpc-url <RPC_URL> --private-key <PRIVATE_KEY>
 ```
 
-### Deploy
+## Testing
 
-```shell
-$ forge script script/Counter.s.sol:CounterScript --rpc-url <your_rpc_url> --private-key <your_private_key>
+Run the test suite:
+```bash
+forge test -vv
 ```
 
-### Cast
+## Security
 
-```shell
-$ cast <subcommand>
-```
+This project uses:
+- OpenZeppelin contracts for security
+- Foundry for testing and deployment
+- Solidity best practices
 
-### Help
+## License
 
-```shell
-$ forge --help
-$ anvil --help
-$ cast --help
-```
+MIT License

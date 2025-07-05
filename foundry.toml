@@ -11,3 +11,6 @@ script = "script"
 exclude_paths = ["lib/forge-std/src/mocks"]
 
 # See more config options https://github.com/foundry-rs/foundry/blob/master/crates/config/README.md#all-options
+
+[profile.zksync]
+rpc_url = "https://sepolia.era.zksync.dev"

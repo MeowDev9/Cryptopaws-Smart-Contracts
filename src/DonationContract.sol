@@ -3,6 +3,7 @@ pragma solidity ^0.8.20;
 
 import "@openzeppelin/contracts/access/Ownable.sol";
 import "@openzeppelin/contracts/utils/ReentrancyGuard.sol";
+import "@chainlink/contracts/src/v0.8/interfaces/AggregatorV3Interface.sol";
 
 contract DonationContract is Ownable, ReentrancyGuard {
     struct Donation {
@@ -29,7 +30,9 @@ contract DonationContract is Ownable, ReentrancyGuard {
     
     uint256 public totalDonations;
     uint256 public totalOrganizations;
-    uint256 public minDonationAmount = 0.01 ether;
+    AggregatorV3Interface internal ethUsdPriceFeed;
+    uint256 public minUsdDonation = 5; // $5 minimum donation
+
 
     event OrganizationRegistered(address indexed organization, string name);
     event DonationMade(address indexed donor, address indexed organization, uint256 amount);
@@ -41,12 +44,33 @@ contract DonationContract is Ownable, ReentrancyGuard {
         _;
     }
 
+    function getLatestEthUsdPrice() public view returns (int256) {
+        (
+            ,
+            int256 price,
+            ,
+            ,
+        ) = ethUsdPriceFeed.latestRoundData();
+        return price; // 8 decimals
+    }
+
+    function ethAmountForUsd(uint256 usdAmount) public view returns (uint256) {
+        int256 price = getLatestEthUsdPrice();
+        require(price > 0, "Invalid price");
+        // (usdAmount * 1e26) / price
+        return (usdAmount * 1e26) / uint256(price);
+    }
+
     modifier validDonation() {
-        require(msg.value >= minDonationAmount, "Donation amount too low");
+        uint256 minEth = ethAmountForUsd(minUsdDonation);
+        require(msg.value >= minEth, "Donation amount too low");
         _;
     }
 
-    constructor() Ownable(msg.sender) {}
+    constructor() Ownable(msg.sender) {
+        // ETH/USD price feed for Sepolia
+        ethUsdPriceFeed = AggregatorV3Interface(0x694AA1769357215DE4FAC081bf1f309aDC325306);
+    }
 
     function registerOrganization(
         string memory _name,
@@ -122,6 +146,7 @@ contract DonationContract is Ownable, ReentrancyGuard {
         uint256 orgTotalDonations,
         uint256 uniqueDonors
     ) {
+        require(isOrganization[_organization], "Organization not found");
         WelfareOrganization storage org = organizations[_organization];
         return (
             org.name,
@@ -141,10 +166,8 @@ contract DonationContract is Ownable, ReentrancyGuard {
         return totalOrganizations;
     }
 
-    function setMinDonationAmount(uint256 _amount) external onlyOwner {
-        minDonationAmount = _amount;
-        emit MinDonationAmountUpdated(_amount);
-    }
+    // No longer needed: setMinDonationAmount, minDonationAmount, MinDonationAmountUpdated event
+
 
     // Function to receive ETH
     receive() external payable {}

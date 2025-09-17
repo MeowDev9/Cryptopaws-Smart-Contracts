@@ -76,10 +76,15 @@ contract DonationContractTest is Test {
         assertEq(history[0].message, "Test donation");
     }
 
-    function test_SetMinDonationAmount() public {
-        uint256 newAmount = 0.02 ether;
-        donationContract.setMinDonationAmount(newAmount);
-        assertEq(donationContract.minDonationAmount(), newAmount);
+    function test_EthAmountForUsd() public {
+        uint256 usdAmount = 10; // $10
+        uint256 ethAmount = donationContract.ethAmountForUsd(usdAmount);
+        assertGt(ethAmount, 0, "ETH amount should be greater than 0");
+    }
+
+    function test_MinUsdDonation() public {
+        uint256 minUsd = donationContract.minUsdDonation();
+        assertEq(minUsd, 5, "Minimum USD donation should be $5");
     }
 
     function test_RevertWhen_DonatingBelowMinAmount() public {

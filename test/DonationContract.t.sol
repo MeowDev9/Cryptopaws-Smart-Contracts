@@ -4,8 +4,22 @@ pragma solidity ^0.8.20;
 import "forge-std/Test.sol";
 import "../src/DonationContract.sol";
 
+// Mock Chainlink Aggregator for testing
+contract MockAggregatorV3 {
+    int256 private _price;
+    
+    constructor(int256 price) {
+        _price = price;
+    }
+    
+    function latestRoundData() external view returns (uint80, int256, uint256, uint256, uint80) {
+        return (0, _price, 0, block.timestamp, 0);
+    }
+}
+
 contract DonationContractTest is Test {
     DonationContract public donationContract;
+    MockAggregatorV3 public mockPriceFeed;
     address public owner;
     address public organization;
     address public donor;
@@ -17,7 +31,16 @@ contract DonationContractTest is Test {
         donor = address(0x2);
         organizationWallet = address(0x3);
 
+        // Deploy mock price feed with $2000/ETH (with 8 decimals)
+        mockPriceFeed = new MockAggregatorV3(200000000000); // $2000 with 8 decimals
+        
+        // Deploy contract
         donationContract = new DonationContract();
+        
+        // Mock the price feed address by deploying our mock at the expected address
+        vm.etch(0x694AA1769357215DE4FAC081bf1f309aDC325306, address(mockPriceFeed).code);
+        // Set the mock's price storage in the target address
+        vm.store(0x694AA1769357215DE4FAC081bf1f309aDC325306, bytes32(0), bytes32(uint256(200000000000))); // $2000 with 8 decimals
     }
 
     function test_RegisterOrganization() public {
@@ -32,7 +55,7 @@ contract DonationContractTest is Test {
             bool isActive,
             uint256 orgTotalDonations,
             uint256 uniqueDonors
-        ) = donationContract.getOrganizationInfo(organization);
+        ) = donationContract.getOrganizationInfo(organizationWallet); // Check organizationWallet, not organization
 
         assertEq(name, "Test Org");
         assertEq(description, "Test Description");
@@ -51,11 +74,11 @@ contract DonationContractTest is Test {
         // Make donation
         vm.deal(donor, 1 ether);
         vm.startPrank(donor);
-        donationContract.donate{value: 0.5 ether}(organization, "Test donation");
+        donationContract.donate{value: 0.5 ether}(organizationWallet, "Test donation"); // Use organizationWallet
         vm.stopPrank();
 
         // Check organization stats
-        (,,,, uint256 orgTotalDonations, uint256 uniqueDonors) = donationContract.getOrganizationInfo(organization);
+        (,,,, uint256 orgTotalDonations, uint256 uniqueDonors) = donationContract.getOrganizationInfo(organizationWallet); // Use organizationWallet
 
         assertEq(orgTotalDonations, 0.5 ether);
         assertEq(uniqueDonors, 1);
@@ -64,7 +87,7 @@ contract DonationContractTest is Test {
         DonationContract.Donation[] memory history = donationContract.getDonorHistory(donor);
         assertEq(history.length, 1);
         assertEq(history[0].donor, donor);
-        assertEq(history[0].organization, organization);
+        assertEq(history[0].organization, organizationWallet); // Use organizationWallet
         assertEq(history[0].amount, 0.5 ether);
         assertEq(history[0].message, "Test donation");
     }
@@ -86,17 +109,22 @@ contract DonationContractTest is Test {
         donationContract.registerOrganization("Test Org", "Test Description", payable(organizationWallet));
         vm.stopPrank();
 
-        // Try to donate below min amount
-        vm.deal(donor, 0.005 ether);
+        // Try to donate below min amount ($5 USD worth of ETH)
+        // At $2000/ETH, $5 = 0.0025 ETH, so 0.001 ETH should be too low
+        vm.deal(donor, 0.01 ether);
         vm.startPrank(donor);
         vm.expectRevert("Donation amount too low");
-        donationContract.donate{value: 0.005 ether}(organization, "Test donation");
+        donationContract.donate{value: 0.001 ether}(organizationWallet, "Test donation"); // Use organizationWallet
     }
 
     function test_RevertWhen_DonatingToInactiveOrganization() public {
         // Register organization
         vm.startPrank(organization);
         donationContract.registerOrganization("Test Org", "Test Description", payable(organizationWallet));
+        vm.stopPrank();
+
+        // Set organization to inactive - must be called by the organization wallet address
+        vm.startPrank(organizationWallet);
         donationContract.setOrganizationStatus(false);
         vm.stopPrank();
 
@@ -104,6 +132,6 @@ contract DonationContractTest is Test {
         vm.deal(donor, 1 ether);
         vm.startPrank(donor);
         vm.expectRevert("Organization not active");
-        donationContract.donate{value: 0.5 ether}(organization, "Test donation");
+        donationContract.donate{value: 0.5 ether}(organizationWallet, "Test donation"); // Use organizationWallet
     }
 }

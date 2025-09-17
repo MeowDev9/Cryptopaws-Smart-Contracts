@@ -55,14 +55,7 @@ contract DonationContractTest is Test {
         vm.stopPrank();
 
         // Check organization stats
-        (
-            ,
-            ,
-            ,
-            ,
-            uint256 orgTotalDonations,
-            uint256 uniqueDonors
-        ) = donationContract.getOrganizationInfo(organization);
+        (,,,, uint256 orgTotalDonations, uint256 uniqueDonors) = donationContract.getOrganizationInfo(organization);
 
         assertEq(orgTotalDonations, 0.5 ether);
         assertEq(uniqueDonors, 1);
@@ -113,4 +106,4 @@ contract DonationContractTest is Test {
         vm.expectRevert("Organization not active");
         donationContract.donate{value: 0.5 ether}(organization, "Test donation");
     }
-} 
+}

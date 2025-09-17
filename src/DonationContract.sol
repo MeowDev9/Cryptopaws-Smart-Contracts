@@ -27,12 +27,11 @@ contract DonationContract is Ownable, ReentrancyGuard {
     mapping(address => WelfareOrganization) public organizations;
     mapping(address => Donation[]) public donorHistory;
     mapping(address => bool) public isOrganization;
-    
+
     uint256 public totalDonations;
     uint256 public totalOrganizations;
     AggregatorV3Interface internal ethUsdPriceFeed;
     uint256 public minUsdDonation = 5; // $5 minimum donation
-
 
     event OrganizationRegistered(address indexed organization, string name);
     event DonationMade(address indexed donor, address indexed organization, uint256 amount);
@@ -45,12 +44,7 @@ contract DonationContract is Ownable, ReentrancyGuard {
     }
 
     function getLatestEthUsdPrice() public view returns (int256) {
-        (
-            ,
-            int256 price,
-            ,
-            ,
-        ) = ethUsdPriceFeed.latestRoundData();
+        (, int256 price,,,) = ethUsdPriceFeed.latestRoundData();
         return price; // 8 decimals
     }
 
@@ -72,11 +66,9 @@ contract DonationContract is Ownable, ReentrancyGuard {
         ethUsdPriceFeed = AggregatorV3Interface(0x694AA1769357215DE4FAC081bf1f309aDC325306);
     }
 
-    function registerOrganization(
-        string memory _name,
-        string memory _description,
-        address payable _walletAddress
-    ) external {
+    function registerOrganization(string memory _name, string memory _description, address payable _walletAddress)
+        external
+    {
         require(!isOrganization[_walletAddress], "Organization already registered");
         require(_walletAddress != address(0), "Invalid wallet address");
 
@@ -97,17 +89,12 @@ contract DonationContract is Ownable, ReentrancyGuard {
         emit OrganizationStatusChanged(msg.sender, _isActive);
     }
 
-    function donate(address _organization, string memory _message) 
-        external 
-        payable 
-        nonReentrant 
-        validDonation 
-    {
+    function donate(address _organization, string memory _message) external payable nonReentrant validDonation {
         require(isOrganization[_organization], "Organization not found");
         require(organizations[_organization].isActive, "Organization not active");
 
         WelfareOrganization storage org = organizations[_organization];
-        
+
         // Update organization stats
         org.totalDonations += msg.value;
         if (!org.donors[msg.sender]) {
@@ -128,7 +115,7 @@ contract DonationContract is Ownable, ReentrancyGuard {
         totalDonations += msg.value;
 
         // Transfer funds to organization
-        (bool success, ) = org.walletAddress.call{value: msg.value}("");
+        (bool success,) = org.walletAddress.call{value: msg.value}("");
         require(success, "Transfer failed");
 
         emit DonationMade(msg.sender, _organization, msg.value);
@@ -138,24 +125,21 @@ contract DonationContract is Ownable, ReentrancyGuard {
         return donorHistory[_donor];
     }
 
-    function getOrganizationInfo(address _organization) external view returns (
-        string memory name,
-        string memory description,
-        address walletAddress,
-        bool isActive,
-        uint256 orgTotalDonations,
-        uint256 uniqueDonors
-    ) {
+    function getOrganizationInfo(address _organization)
+        external
+        view
+        returns (
+            string memory name,
+            string memory description,
+            address walletAddress,
+            bool isActive,
+            uint256 orgTotalDonations,
+            uint256 uniqueDonors
+        )
+    {
         require(isOrganization[_organization], "Organization not found");
         WelfareOrganization storage org = organizations[_organization];
-        return (
-            org.name,
-            org.description,
-            org.walletAddress,
-            org.isActive,
-            org.totalDonations,
-            org.uniqueDonors
-        );
+        return (org.name, org.description, org.walletAddress, org.isActive, org.totalDonations, org.uniqueDonors);
     }
 
     function getTotalDonations() external view returns (uint256) {
@@ -168,7 +152,6 @@ contract DonationContract is Ownable, ReentrancyGuard {
 
     // No longer needed: setMinDonationAmount, minDonationAmount, MinDonationAmountUpdated event
 
-
     // Function to receive ETH
     receive() external payable {}
-} 
+}
